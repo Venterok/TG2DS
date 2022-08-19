@@ -1,0 +1,4 @@
+pyimgur==0.6.0
+colorthief==0.2.1
+Telethon==1.24.0
+discord_webhook==0.16.3

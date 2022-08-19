@@ -1,15 +1,14 @@
-import asyncio
 import os
 import random
 import shutil
 
 import pyimgur
+from colorthief import ColorThief
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from telethon import TelegramClient, events, utils
 
 api_id = 'api_id'   # Client Telegram api_id
 api_hash = 'api_hash'  # Client Telegram api_hash
-
 CLIENT_ID = 'CLIENT_ID'  # Imgur Client ID
 
 channels = {
@@ -23,8 +22,11 @@ channels = {
         'telegram-channel-avatar']
 }
 
-client = TelegramClient('Sunblogs', api_id, api_hash)
-print("TG2DS Started.")
+client = TelegramClient('telegramClientName', api_id, api_hash)
+
+
+def rgbttohex(colortuple):
+    return ''.join(f'{i:02X}' for i in colortuple)
 
 
 @client.on(events.NewMessage())
@@ -32,7 +34,7 @@ async def my_event_handler(event):
     # Getting settings from dict
     channeldata = channels[event.message.peer_id.channel_id]
     webhook = DiscordWebhook(url=channeldata[0])
-    # Hex color shit
+    # Random Hex Color
     hexcolor = "{:06x}".format(random.randint(0, 0xFFFFFF))  # TODO Hex color from image
 
     # Get Chat Name
@@ -40,21 +42,28 @@ async def my_event_handler(event):
     chat_title = utils.get_display_name(chat_from)
 
     # Set text to embed
-    embed = DiscordEmbed(description=event.message.text + "\n\n" + channeldata[1], color=hexcolor)
+    embed = DiscordEmbed(description=event.message.text + "\n\n" + channeldata[1])
 
     # If message contain photo
     if event.photo:
         saved_path = await event.download_media('temp')
-        await asyncio.sleep(3)
         PATH = saved_path
 
         im = pyimgur.Imgur(CLIENT_ID)
         uploaded_image = im.upload_image(PATH, title="Uploaded with PyImgur")
         embed.set_image(url=uploaded_image.link)
 
+        # Dominant Color of image
+        dominantcolor = ColorThief(saved_path)
+        dominant_color = dominantcolor.get_color(quality=1)
+
+        embed.set_color(rgbttohex(dominant_color))
+    else:
+        embed.set_color(hexcolor)
+
     # If author & footer & timestamp
     embed.set_footer(text=chat_title, icon_url=channeldata[2])
-    embed.set_author(name='Новый пост!')
+    embed.set_author(name='Новый постs!')
     embed.set_timestamp()
 
     # Send this shit
@@ -72,7 +81,6 @@ async def my_event_handler(event):
                 shutil.rmtree(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
 
 
 client.start()
